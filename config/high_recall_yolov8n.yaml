@@ -1,0 +1,26 @@
+video:
+  frame_stride: 1
+  write_annotated_video: false
+
+model:
+  model_path: yolov8n.pt
+  detection_confidence: 0.15
+  iou_threshold: 0.45
+  player_class_id: 0
+  ball_class_id: 32
+  device: null
+
+tracking:
+  lost_track_buffer: 30
+  minimum_matching_threshold: 0.8
+  minimum_consecutive_frames: 1
+
+teams:
+  enabled: true
+  team_count: 2
+  min_track_samples: 3
+  upper_body_ratio: 0.55
+
+possession:
+  control_radius_px: 110.0
+  min_control_frames: 2

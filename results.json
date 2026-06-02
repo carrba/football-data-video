@@ -1,0 +1,28 @@
+{
+  "image": "images/liam_3.jpg",
+  "valid": true,
+  "error": null,
+  "landmarks_used": 9,
+  "coordinate_method": "auto_homography",
+  "ball": {
+    "standard_format": {
+      "x": 114.7939224243164,
+      "y": 50.168277740478516
+    },
+    "pixel_format": {
+      "x": 1096.688232421875,
+      "y": 372.8434753417969
+    }
+  },
+  "goalkeeper": {
+    "standard_format": {
+      "x": 114.92811584472656,
+      "y": 52.12051010131836
+    },
+    "pixel_format": {
+      "x": 9.176666259765625,
+      "y": 313.9639587402344
+    }
+  },
+  "pitch_bounds": null
+}

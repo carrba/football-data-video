@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "football-possession"
+version = "0.1.0"
+description = "Offline football possession estimation from recorded match video."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "opencv-python>=4.10",
+    "pandas>=2.2",
+    "PyYAML>=6.0",
+    "scikit-learn>=1.5",
+    "supervision>=0.25.1",
+    "ultralytics>=8.3",
+]
+
+[project.scripts]
+football-possession = "football_possession.main:main"
+football-clips = "football_possession.clip_generator:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+*.pyc
+*.pt
+outputs/
+images/
+datasets/
+annotations/
+video/
+
+# Local env and secrets
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# Local/editor/system artifacts
+.DS_Store
+Thumbs.db

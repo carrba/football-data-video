@@ -1,0 +1,35 @@
+video:
+  frame_stride: 1
+  write_annotated_video: true
+
+model:
+  model_path: yolov8m.pt
+  player_model_path: yolov8m.pt
+  ball_model_path: yolov8m.pt
+  detection_confidence: 0.05
+  player_detection_confidence: 0.15
+  ball_detection_confidence: 0.03
+  iou_threshold: 0.45
+  ball_iou_threshold: 0.35
+  player_class_id: 0
+  ball_class_id: 32
+  device: null
+  two_stage_ball_detection: true
+  pitch_mask_enabled: true
+  ball_tile_size: 768
+  ball_tile_overlap: 96
+
+tracking:
+  lost_track_buffer: 30
+  minimum_matching_threshold: 0.8
+  minimum_consecutive_frames: 1
+
+teams:
+  enabled: true
+  team_count: 2
+  min_track_samples: 3
+  upper_body_ratio: 0.55
+
+possession:
+  control_radius_px: 110.0
+  min_control_frames: 2
