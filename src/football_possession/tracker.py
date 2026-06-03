@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from football_possession.config import TrackingConfig
-from football_possession.types import PlayerDetection
+from football_possession.detection_types import PlayerDetection
 
 try:
     import supervision as sv

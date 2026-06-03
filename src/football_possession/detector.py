@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 from football_possession.config import ModelConfig
-from football_possession.types import BallDetection, PlayerDetection
+from football_possession.detection_types import BallDetection, PlayerDetection
 
 try:
     from ultralytics import YOLO
