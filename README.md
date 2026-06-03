@@ -54,6 +54,91 @@ Optional arguments:
 - `--output-dir outputs/sample-run`
 - `--no-video`
 
+## EC2 + S3 data sync workflow
+
+When running this repo on an EC2 instance, keep large runtime data in S3 and sync it on demand.
+
+This repo now includes `football-s3` with two commands:
+
+- `push`: upload selected local paths to S3
+- `pull`: download selected S3 paths to local repo paths
+
+Bucket and prefix can be set either with command flags or environment variables:
+
+- `FOOTBALL_S3_BUCKET` for bucket name
+- `FOOTBALL_S3_PREFIX` for key prefix (optional, defaults to `football-data-video`)
+
+Default synced paths are:
+
+- `video`
+- `datasets`
+- `annotations`
+- `outputs`
+- `results.json`
+
+### 1) AWS auth on EC2
+
+Recommended: attach an IAM role to the EC2 instance with at least:
+
+- `s3:ListBucket` on the target bucket
+- `s3:GetObject` and `s3:PutObject` on the target prefix
+
+### 2) Install dependencies
+
+```powershell
+c:/Users/bcarr/github/football-data-video/.venv/Scripts/python.exe -m pip install -e .
+```
+
+### 3) Pull data to EC2 before running
+
+```powershell
+football-s3 pull --bucket your-bucket-name --prefix football-data-video --region us-east-1
+```
+
+Or with env vars:
+
+```powershell
+$env:FOOTBALL_S3_BUCKET = "your-bucket-name"
+$env:FOOTBALL_S3_PREFIX = "football-data-video"
+football-s3 pull --region us-east-1
+```
+
+Preview only (no writes):
+
+```powershell
+football-s3 pull --bucket your-bucket-name --prefix football-data-video --dry-run
+```
+
+### 4) Run processing on EC2
+
+```powershell
+football-possession --video video\clip_10_30.mp4
+```
+
+### 5) Push outputs back to S3
+
+```powershell
+football-s3 push --bucket your-bucket-name --prefix football-data-video --paths outputs results.json
+```
+
+You can sync custom paths with `--paths`, for example:
+
+```powershell
+football-s3 push --bucket your-bucket-name --prefix football-data-video --paths video outputs
+```
+
+To include local YOLO model files too:
+
+```powershell
+football-s3 push --paths "*.pt" "video/*.pt" video datasets annotations outputs results.json
+```
+
+You can preview any command first:
+
+```powershell
+football-s3 push --paths "*.pt" "video/*.pt" video datasets annotations outputs results.json --dry-run
+```
+
 ## Generate clips from a full match
 
 Yes. The standard free CLI tool for this is `ffmpeg`, and it is already installed in your environment.

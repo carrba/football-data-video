@@ -18,7 +18,7 @@ from football_possession.coordinate_system import (
 )
 from football_possession.detector import YoloDetector, build_pitch_mask, pitch_bbox
 from football_possession.landmark_detector import detect_landmarks
-from football_possession.types import BallDetection, PlayerDetection
+from football_possession.detection_types import BallDetection, PlayerDetection
 
 
 @dataclass(slots=True)

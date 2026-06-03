@@ -9,6 +9,7 @@ description = "Offline football possession estimation from recorded match video.
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "boto3>=1.34",
     "numpy>=1.26",
     "opencv-python>=4.10",
     "pandas>=2.2",
@@ -21,6 +22,7 @@ dependencies = [
 [project.scripts]
 football-possession = "football_possession.main:main"
 football-clips = "football_possession.clip_generator:main"
+football-s3 = "football_possession.s3_sync:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

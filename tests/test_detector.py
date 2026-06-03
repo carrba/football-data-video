@@ -8,7 +8,7 @@ from football_possession.detector import (
     deduplicate_ball_detections,
     pitch_bbox,
 )
-from football_possession.types import BallDetection
+from football_possession.detection_types import BallDetection
 
 
 class DetectorHelperTests(unittest.TestCase):

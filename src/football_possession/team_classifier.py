@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 from football_possession.config import TeamConfig
-from football_possession.types import PlayerDetection
+from football_possession.detection_types import PlayerDetection
 
 
 class TeamColorClassifier:

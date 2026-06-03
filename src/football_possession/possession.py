@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 
 from football_possession.config import PossessionConfig
-from football_possession.types import BallDetection, PlayerDetection
+from football_possession.detection_types import BallDetection, PlayerDetection
 
 
 def _bbox_center(bbox: tuple[float, float, float, float]) -> tuple[float, float]:

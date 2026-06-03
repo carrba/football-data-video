@@ -13,7 +13,7 @@ from football_possession.detector import YoloDetector
 from football_possession.possession import PossessionEstimator
 from football_possession.team_classifier import TeamColorClassifier
 from football_possession.tracker import PlayerTracker
-from football_possession.types import BallDetection, FrameRecord, PlayerDetection
+from football_possession.detection_types import BallDetection, FrameRecord, PlayerDetection
 from football_possession.video_io import build_video_writer, get_video_metadata, iter_video_frames
 
 TEAM_COLORS = {
