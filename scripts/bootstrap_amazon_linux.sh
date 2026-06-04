@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
 
+# sudo dnf install python3.11
+# sudo alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 2
+# python3 -m venv .venv
+# source .venv/bin/activate
+# pip install --upgrade pip
+# mkdir -p ~/pip-tmp
+# export TMPDIR=~/pip-tmp
+# source ~/.bashrc
+# TMPDIR=~/pip-tmp pip install .
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -45,7 +55,7 @@ install_system_packages() {
 
   log "Installing system packages with $pkg_manager"
   run_as_root "$pkg_manager" install -y \
-    python3 \
+    python3.11 \
     python3-pip \
     git \
     patch \

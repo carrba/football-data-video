@@ -16,7 +16,6 @@ DEFAULT_PATHS = ["video", "datasets", "annotations", "outputs", "results.json"]
 EXCLUDED_PARTS = {".git", ".venv", "__pycache__", ".pytest_cache"}
 ENV_BUCKET = "FOOTBALL_S3_BUCKET"
 ENV_PREFIX = "FOOTBALL_S3_PREFIX"
-DEFAULT_AWS_PROFILE = "ukddc-sandbox"
 
 
 @dataclass(frozen=True)
@@ -24,7 +23,7 @@ class SyncConfig:
     bucket: str
     prefix: str
     region: str | None
-    profile: str
+    profile: str | None
     paths: list[str]
     dry_run: bool
 
@@ -101,8 +100,11 @@ def _relative_key(path: Path, root: Path, prefix: str) -> str:
     return f"{prefix}{rel}"
 
 
-def _s3_client(region: str | None, profile: str) -> BaseClient:
-    session = boto3.session.Session(profile_name=profile, region_name=region)
+def _s3_client(region: str | None, profile: str | None) -> BaseClient:
+    if profile:
+        session = boto3.session.Session(profile_name=profile, region_name=region)
+    else:
+        session = boto3.session.Session(region_name=region)
     return session.client("s3")
 
 
@@ -183,14 +185,11 @@ def build_parser() -> argparse.ArgumentParser:
         )
         sub.add_argument(
             "--profile",
-            default=(
-                os.getenv("AWS_PROFILE")
-                or os.getenv("AWS_DEFAULT_PROFILE")
-                or DEFAULT_AWS_PROFILE
-            ),
+            default=None,
             help=(
-                "AWS named profile used for authentication. Defaults to "
-                "AWS_PROFILE/AWS_DEFAULT_PROFILE or 'ukddc-sandbox'."
+                "AWS named profile used for authentication. When omitted, the "
+                "default AWS credential chain is used, which allows EC2 IAM "
+                "roles to work without a profile."
             ),
         )
         sub.add_argument(
