@@ -28,14 +28,22 @@ Possession is an inferred event, not a directly visible label. A strong first ve
 Create and activate a virtual environment, then install the package in editable mode.
 
 ```powershell
-c:/Users/bcarr/github/football-data-video/.venv/Scripts/python.exe -m pip install --upgrade pip
-c:/Users/bcarr/github/football-data-video/.venv/Scripts/python.exe -m pip install -e .
+../football-data-video/.venv/Scripts/python.exe -m pip install --upgrade pip
+../football-data-video/.venv/Scripts/python.exe -m pip install -e .
 ```
+
+On Amazon Linux, you can bootstrap the instance with the helper script in this repo:
+
+```bash
+bash scripts/bootstrap_amazon_linux.sh
+```
+
+It installs Python 3.11+ if needed, creates `.venv`, upgrades packaging tools, and installs the project in editable mode.
 
 ## Run
 
 ```powershell
-c:/Users/bcarr/github/football-data-video/.venv/Scripts/python.exe -m football_possession.main --video path\to\veo_clip.mp4
+../football-data-video/.venv/Scripts/python.exe -m football_possession.main --video path\to\veo_clip.mp4
 ```
 
 If you run the command from the repository root, a clip in the `video` folder should be passed as `video\clip_10_30.mp4`.
@@ -86,7 +94,7 @@ Recommended: attach an IAM role to the EC2 instance with at least:
 ### 2) Install dependencies
 
 ```powershell
-c:/Users/bcarr/github/football-data-video/.venv/Scripts/python.exe -m pip install -e .
+../football-data-video/.venv/Scripts/python.exe -m pip install -e .
 ```
 
 ### 3) Pull data to EC2 before running
@@ -158,7 +166,7 @@ ffmpeg -y -ss 00:10:00 -i video\full_match.mp4 -t 00:00:30 -c:v libx264 -preset 
 This repo now also includes a helper command to generate a batch of fixed-length clips:
 
 ```powershell
-c:/Users/bcarr/github/football-data-video/.venv/Scripts/python.exe -m football_possession.clip_generator --input video\full_match.mp4 --output-dir video\clips --clip-duration 30 --step 60 --start-offset 300 --end-padding 300 --max-clips 10
+../football-data-video/.venv/Scripts/python.exe -m football_possession.clip_generator --input video\full_match.mp4 --output-dir video\clips --clip-duration 30 --step 60 --start-offset 300 --end-padding 300 --max-clips 10
 ```
 
 That example will:
