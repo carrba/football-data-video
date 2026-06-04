@@ -49,6 +49,7 @@ install_system_packages() {
     python3-devel \
     python3-pip \
     git \
+    patch \
     gcc \
     make \
     openssl-devel \
