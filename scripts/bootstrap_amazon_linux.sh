@@ -9,7 +9,7 @@ PYTHON_VERSION_MIN="3.11"
 PYTHON_VERSION_TARGET="${PYTHON_VERSION_TARGET:-3.11.12}"
 
 log() {
-  printf '[bootstrap] %s\n' "$*"
+  printf '[bootstrap] %s\n' "$*" >&2
 }
 
 run_as_root() {
@@ -46,7 +46,6 @@ install_system_packages() {
   log "Installing system packages with $pkg_manager"
   run_as_root "$pkg_manager" install -y \
     python3 \
-    python3-devel \
     python3-pip \
     git \
     patch \
