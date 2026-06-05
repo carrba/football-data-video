@@ -8,12 +8,16 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 try:
     from ultralytics import YOLO
 except ImportError:
     print("Error: ultralytics is required. Install with: pip install ultralytics")
+    print(f"Active Python: {sys.executable}")
+    print("Tip: install into this interpreter with:")
+    print(f"  {sys.executable} -m pip install ultralytics")
     exit(1)
 
 

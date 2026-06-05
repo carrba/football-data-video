@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
+# sudo dnf install git -y
 # sudo dnf install python3.11
-# sudo alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 2
-# python3 -m venv .venv
-# source .venv/bin/activate
+# ### sudo alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 2
+# /usr/bin/python3.11 -m venv myenv
+# source myenv/bin/activate
+
 # pip install --upgrade pip
 # mkdir -p ~/pip-tmp
 # export TMPDIR=~/pip-tmp
