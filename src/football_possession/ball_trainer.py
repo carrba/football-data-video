@@ -8,8 +8,13 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
+import re
 import sys
+import tempfile
 from pathlib import Path
+
+import yaml
 
 try:
     from ultralytics import YOLO
@@ -30,6 +35,42 @@ def _resolve_device(device: int | str) -> int | str:
             return "cpu"
         return 0 if torch.cuda.is_available() else "cpu"
     return device
+
+
+def _prepare_data_yaml_for_runtime(data_yaml: Path) -> Path:
+    """Create a runtime-safe YOLO data.yaml with a normalized absolute dataset path."""
+    with open(data_yaml, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f) or {}
+
+    if not isinstance(config, dict):
+        return data_yaml
+
+    dataset_root = data_yaml.parent.resolve()
+    path_value = config.get("path")
+    normalized_path = None
+
+    if not isinstance(path_value, str) or not path_value.strip() or path_value.strip() == ".":
+        normalized_path = dataset_root
+    else:
+        path_text = path_value.strip()
+        is_windows_abs = bool(re.match(r"^[A-Za-z]:[\\/]", path_text))
+        if is_windows_abs and os.name != "nt":
+            normalized_path = dataset_root
+        else:
+            candidate = Path(path_text)
+            if not candidate.is_absolute():
+                normalized_path = (dataset_root / candidate).resolve()
+
+    if normalized_path is None:
+        return data_yaml
+
+    config["path"] = str(normalized_path)
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".yaml", prefix="ball_train_data_", delete=False, encoding="utf-8"
+    ) as temp_file:
+        yaml.safe_dump(config, temp_file, sort_keys=False)
+        return Path(temp_file.name)
 
 
 def train_ball_detector(
@@ -58,11 +99,15 @@ def train_ball_detector(
     if not data_yaml.exists():
         print(f"Error: {data_yaml} not found")
         return
+
+    runtime_data_yaml = _prepare_data_yaml_for_runtime(data_yaml)
     
     resolved_device = _resolve_device(device)
 
     print(f"Starting training:")
     print(f"  Data YAML: {data_yaml}")
+    if runtime_data_yaml != data_yaml:
+        print(f"  Runtime data YAML: {runtime_data_yaml}")
     print(f"  Model size: yolov8{model_size}")
     print(f"  Epochs: {epochs}")
     print(f"  Image size: {imgsz}")
@@ -75,7 +120,7 @@ def train_ball_detector(
     
     # Train
     results = model.train(
-        data=str(data_yaml),
+        data=str(runtime_data_yaml),
         epochs=epochs,
         imgsz=imgsz,
         device=resolved_device,
