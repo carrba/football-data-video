@@ -110,7 +110,7 @@ def create_yolo_dataset(
     # Create data.yaml for YOLO training
     data_yaml = output_dir / "data.yaml"
     with open(data_yaml, "w") as f:
-        f.write(f"path: {output_dir.absolute()}\n")
+        f.write("path: .\n")
         f.write("train: images\n")
         f.write("val: images\n")
         f.write("nc: 1\n")  # number of classes

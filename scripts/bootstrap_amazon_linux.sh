@@ -72,7 +72,13 @@ install_system_packages() {
     xz-devel \
     tk-devel \
     curl \
-    tar
+    tar \
+    libxcb \
+    libX11 \
+    libXext \
+    libSM \
+    libXrender \
+    mesa-libGL
 }
 
 ensure_python() {
