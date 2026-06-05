@@ -73,12 +73,51 @@ install_system_packages() {
     tk-devel \
     curl \
     tar \
+    pciutils \
     libxcb \
     libX11 \
     libXext \
     libSM \
     libXrender \
     mesa-libGL
+}
+
+install_nvidia_driver_if_gpu() {
+  local pkg_manager="$1"
+
+  if ! command -v lspci >/dev/null 2>&1; then
+    return
+  fi
+
+  if ! lspci | grep -qi 'NVIDIA'; then
+    log "No NVIDIA GPU detected; skipping driver installation"
+    return
+  fi
+
+  if command -v nvidia-smi >/dev/null 2>&1; then
+    log "nvidia-smi already present; skipping driver installation"
+    return
+  fi
+
+  log "NVIDIA GPU detected; attempting driver installation"
+
+  # Package names vary by Amazon Linux release and repository availability.
+  if run_as_root "$pkg_manager" install -y nvidia-driver-latest-dkms; then
+    log "Installed NVIDIA driver package: nvidia-driver-latest-dkms"
+    return
+  fi
+
+  if run_as_root "$pkg_manager" install -y nvidia-driver; then
+    log "Installed NVIDIA driver package: nvidia-driver"
+    return
+  fi
+
+  if run_as_root "$pkg_manager" install -y cuda-drivers; then
+    log "Installed NVIDIA driver package: cuda-drivers"
+    return
+  fi
+
+  log "Could not install NVIDIA drivers automatically. Install manually and reboot before training on GPU."
 }
 
 ensure_python() {
@@ -152,6 +191,9 @@ main() {
 
   log "Using repository root $PROJECT_ROOT"
   log "Minimum Python version required by pyproject.toml is $PYTHON_VERSION_MIN"
+
+  install_system_packages "$pkg_manager"
+  install_nvidia_driver_if_gpu "$pkg_manager"
 
   local python_executable
   python_executable="$(ensure_python "$pkg_manager")"
