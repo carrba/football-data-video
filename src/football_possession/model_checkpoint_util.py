@@ -60,8 +60,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--glob",
-        default="ball_detector*/weights/best.pt",
-        help="Glob pattern under --search-root (default: ball_detector*/weights/best.pt)",
+        default="**/ball_detector*/weights/best.pt",
+        help="Glob pattern under --search-root (default: **/ball_detector*/weights/best.pt)",
     )
     parser.add_argument(
         "--dry-run",
@@ -83,7 +83,7 @@ def main() -> int:
     if latest is None:
         print(
             "Error: no checkpoint found. "
-            "Expected something like runs/detect/ball_detector*/weights/best.pt"
+            "Expected something like runs/detect/**/ball_detector*/weights/best.pt"
         )
         return 1
 

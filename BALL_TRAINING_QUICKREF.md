@@ -50,7 +50,7 @@ python -m football_possession.ball_trainer `
 ```powershell
 python -m football_possession.ball_trainer `
     --eval `
-    --model "runs/detect/ball_detector/weights/best.pt" `
+    --model "runs/detect/runs/detect/ball_detectorweights/best.pt" `
     --data-yaml "datasets/ball_detector_v1/data.yaml"
 ```
 
