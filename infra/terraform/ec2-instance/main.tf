@@ -13,8 +13,8 @@ provider "aws" {
   region = var.aws_region
 }
 
-data "aws_ssm_parameter" "amazon_linux_2023_ami" {
-  name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+data "aws_ssm_parameter" "deep_learning_gpu_ami" {
+  name = var.deep_learning_ami_ssm_parameter
 }
 
 data "aws_iam_policy_document" "ec2_assume_role" {
@@ -121,7 +121,7 @@ resource "aws_security_group" "ssh" {
 }
 
 resource "aws_instance" "this" {
-  ami                         = data.aws_ssm_parameter.amazon_linux_2023_ami.value
+  ami                         = data.aws_ssm_parameter.deep_learning_gpu_ami.value
   instance_type               = var.instance_type
   key_name                    = var.key_name
   iam_instance_profile        = aws_iam_instance_profile.this.name

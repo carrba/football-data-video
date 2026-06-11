@@ -16,6 +16,12 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
+variable "deep_learning_ami_ssm_parameter" {
+  type        = string
+  description = "Public SSM parameter name for the Deep Learning GPU AMI ID"
+  default     = "/aws/service/deeplearning/ami/x86_64/base-oss-nvidia-driver-gpu-amazon-linux-2023/latest/ami-id"
+}
+
 variable "key_name" {
   type        = string
   description = "Optional EC2 key pair name. Leave null when using EC2 Instance Connect."

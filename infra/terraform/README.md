@@ -42,6 +42,13 @@ terraform init
 terraform apply
 ```
 
+The EC2 stack resolves the AMI from AWS Public SSM using a Deep Learning GPU AMI path by default.
+You can override this in [infra/terraform/ec2-instance/terraform.tfvars](infra/terraform/ec2-instance/terraform.tfvars) with:
+
+```hcl
+deep_learning_ami_ssm_parameter = "/aws/service/deeplearning/ami/x86_64/base-oss-nvidia-driver-gpu-amazon-linux-2023/latest/ami-id"
+```
+
 EC2 connectivity defaults to EC2 Instance Connect (no SSH key pair required):
 
 - Keep `key_name = null` in `terraform.tfvars`.

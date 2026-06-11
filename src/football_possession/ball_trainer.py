@@ -170,10 +170,14 @@ def evaluate_model(model_path: str, data_yaml: str) -> None:
     if not data_yaml.exists():
         print(f"Error: {data_yaml} not found")
         return
+
+    runtime_data_yaml = _prepare_data_yaml_for_runtime(data_yaml)
     
     print(f"Evaluating model: {model_path}")
+    if runtime_data_yaml != data_yaml:
+        print(f"Runtime data YAML: {runtime_data_yaml}")
     model = YOLO(str(model_path))
-    metrics = model.val(data=str(data_yaml))
+    metrics = model.val(data=str(runtime_data_yaml))
     
     print("\nEvaluation Results:")
     print(f"  mAP50: {metrics.box.map50:.4f}")
