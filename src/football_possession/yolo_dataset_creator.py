@@ -54,71 +54,71 @@ def create_yolo_dataset(
     
     print(f"Found {len(annotations)} annotated frames")
     
-    # Create directory structure
+    # Create directory structure (train/val subdirs built after split is known)
     images_dir = output_dir / "images"
     labels_dir = output_dir / "labels"
-    images_dir.mkdir(parents=True, exist_ok=True)
-    labels_dir.mkdir(parents=True, exist_ok=True)
     
     # Open video
     cap = cv2.VideoCapture(str(video_path))
-    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    
-    # Process each annotated frame
-    dataset = []
+
+    # Collect all frames first so we can assign train/val before writing
+    raw_frames: list[tuple[int, float, float]] = []
     for frame_idx, (x, y) in sorted(annotations.items()):
         if frame_idx % skip_frames != 0:
             continue
-        
+        raw_frames.append((frame_idx, x, y))
+
+    num_train = int(len(raw_frames) * train_split)
+    train_set = {fi for fi, _, _ in raw_frames[:num_train]}
+
+    for split in ("train", "val"):
+        (images_dir / split).mkdir(parents=True, exist_ok=True)
+        (labels_dir / split).mkdir(parents=True, exist_ok=True)
+
+    dataset: list[tuple[str, str]] = []
+    for frame_idx, x, y in raw_frames:
+        split = "train" if frame_idx in train_set else "val"
+
         cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
         ret, frame = cap.read()
         if not ret:
             print(f"Could not read frame {frame_idx}")
             continue
-        
-        # Save image
+
         image_filename = f"frame_{frame_idx:06d}.jpg"
-        image_path = images_dir / image_filename
-        cv2.imwrite(str(image_path), frame)
-        
-        # Create YOLO label
-        # x, y are already normalized [0, 1], but represent center
-        # For YOLO format, we need: class_id x_center y_center width height
-        # We'll use a small fixed width/height for the ball (0.02 = 2% of image)
+        cv2.imwrite(str(images_dir / split / image_filename), frame)
+
+        # x, y are normalized centers; ball_size is fixed at 2% of image
         ball_size = 0.02
-        
         label_filename = f"frame_{frame_idx:06d}.txt"
-        label_path = labels_dir / label_filename
-        
-        with open(label_path, "w") as f:
-            # class_id=0 for ball, x and y are centers, width and height are normalized
+        with open(labels_dir / split / label_filename, "w") as f:
             f.write(f"0 {x:.6f} {y:.6f} {ball_size:.6f} {ball_size:.6f}\n")
-        
+
         dataset.append((image_filename, label_filename))
-        print(f"Frame {frame_idx}: ({x:.3f}, {y:.3f}) -> {image_filename}")
-    
+        print(f"Frame {frame_idx} [{split}]: ({x:.3f}, {y:.3f}) -> {image_filename}")
+
     cap.release()
-    
-    # Split into train/val
-    num_train = int(len(dataset) * train_split)
-    train_data = dataset[:num_train]
-    val_data = dataset[num_train:]
-    
-    print(f"\nDataset split: {len(train_data)} train, {len(val_data)} validation")
-    
+
+    train_count = len(train_set)
+    val_count = len(dataset) - train_count
+    print(f"\nDataset split: {train_count} train, {val_count} validation")
+
     # Create data.yaml for YOLO training
+    import yaml as _yaml
     data_yaml = output_dir / "data.yaml"
+    config = {
+        "path": str(output_dir.resolve()),
+        "train": "images/train",
+        "val": "images/val",
+        "nc": 1,
+        "names": ["ball"],
+    }
     with open(data_yaml, "w") as f:
-        f.write("path: .\n")
-        f.write("train: images\n")
-        f.write("val: images\n")
-        f.write("nc: 1\n")  # number of classes
-        f.write("names: ['ball']\n")
-    
+        _yaml.safe_dump(config, f, sort_keys=False)
+
     print(f"\nCreated data.yaml at {data_yaml}")
-    print(f"Images saved to: {images_dir}")
-    print(f"Labels saved to: {labels_dir}")
+    print(f"Images saved to: {images_dir}/{{train,val}}/")
+    print(f"Labels saved to: {labels_dir}/{{train,val}}/")
     print("\nYOLO dataset is ready for training!")
     print(f"Use: yolo detect train data={data_yaml} model=yolov8n.pt epochs=100")
 
