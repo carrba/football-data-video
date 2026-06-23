@@ -12,7 +12,7 @@ from botocore.client import BaseClient
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_PATHS = ["video", "datasets", "annotations", "outputs", "results.json"]
+DEFAULT_PATHS = ["video", "datasets", "annotations", "outputs", "config", "results.json"]
 EXCLUDED_PARTS = {".git", ".venv", "__pycache__", ".pytest_cache"}
 ENV_BUCKET = "FOOTBALL_S3_BUCKET"
 ENV_PREFIX = "FOOTBALL_S3_PREFIX"
