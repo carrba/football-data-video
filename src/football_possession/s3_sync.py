@@ -109,20 +109,35 @@ def _s3_client(region: str | None, profile: str | None) -> BaseClient:
     return session.client("s3")
 
 
+def _list_s3_sizes(client: BaseClient, bucket: str, prefix: str) -> dict[str, int]:
+    """Return {key: size_bytes} for all objects under prefix."""
+    sizes: dict[str, int] = {}
+    paginator = client.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+        for obj in page.get("Contents", []):
+            sizes[obj["Key"]] = obj["Size"]
+    return sizes
+
+
 def push_to_s3(config: SyncConfig) -> None:
     root = PROJECT_ROOT
     prefix = _normalize_prefix(config.prefix)
     client = _s3_client(config.region, config.profile)
+    s3_sizes = _list_s3_sizes(client, config.bucket, prefix)
 
-    uploaded = 0
+    uploaded = skipped = 0
     for file_path in _iter_local_files(root, config.paths):
         key = _relative_key(file_path, root, prefix)
+        if s3_sizes.get(key) == file_path.stat().st_size:
+            print(f"SKIP {file_path.relative_to(root)} (same size)")
+            skipped += 1
+            continue
         print(f"PUSH {file_path.relative_to(root)} -> s3://{config.bucket}/{key}")
         if not config.dry_run:
             client.upload_file(str(file_path), config.bucket, key)
         uploaded += 1
 
-    print(f"Upload complete. Files processed: {uploaded}")
+    print(f"Upload complete. Uploaded: {uploaded}, skipped: {skipped}")
 
 
 def pull_from_s3(config: SyncConfig) -> None:
@@ -130,7 +145,7 @@ def pull_from_s3(config: SyncConfig) -> None:
     prefix = _normalize_prefix(config.prefix)
     client = _s3_client(config.region, config.profile)
 
-    downloaded = 0
+    downloaded = skipped = 0
 
     paginator = client.get_paginator("list_objects_v2")
     for page in paginator.paginate(Bucket=config.bucket, Prefix=prefix):
@@ -141,12 +156,16 @@ def pull_from_s3(config: SyncConfig) -> None:
                 continue
 
             # Keep only selected paths (supports both prefixes and glob specs).
-            keep = _path_spec_matches(rel, config.paths)
-            if not keep:
+            if not _path_spec_matches(rel, config.paths):
                 continue
 
             destination = root / rel
             if _is_excluded(destination):
+                continue
+
+            if destination.exists() and destination.stat().st_size == obj["Size"]:
+                print(f"SKIP {destination.relative_to(root)} (same size)")
+                skipped += 1
                 continue
 
             print(f"PULL s3://{config.bucket}/{key} -> {destination.relative_to(root)}")
@@ -155,7 +174,7 @@ def pull_from_s3(config: SyncConfig) -> None:
                 client.download_file(config.bucket, key, str(destination))
             downloaded += 1
 
-    print(f"Download complete. Files processed: {downloaded}")
+    print(f"Download complete. Downloaded: {downloaded}, skipped: {skipped}")
 
 
 def build_parser() -> argparse.ArgumentParser:
