@@ -55,8 +55,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--search-root",
-        default="runs/detect",
-        help="Directory to search for checkpoints (default: runs/detect)",
+        default="runs",
+        help="Directory to search for checkpoints (default: runs)",
     )
     parser.add_argument(
         "--glob",

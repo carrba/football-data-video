@@ -126,7 +126,7 @@ def train_ball_detector(
         device=resolved_device,
         patience=patience,
         save=True,
-        project="runs/detect",
+        project="runs",
         name="ball_detector",
         # Hyperparameters
         lr0=0.01,
@@ -149,10 +149,10 @@ def train_ball_detector(
     )
     
     print("\nTraining complete!")
-    print(f"Best model saved to: runs/detect/ball_detector/weights/best.pt")
-    print(f"Last model saved to: runs/detect/ball_detector/weights/last.pt")
+    print(f"Best model saved to: runs/ball_detector/weights/best.pt")
+    print(f"Last model saved to: runs/ball_detector/weights/last.pt")
     print("\nTo use trained model:")
-    print("  model = YOLO('runs/detect/ball_detector/weights/best.pt')")
+    print("  model = YOLO('runs/ball_detector/weights/best.pt')")
     print("  results = model.predict('image.jpg')")
     
     return results
