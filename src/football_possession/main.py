@@ -46,6 +46,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip annotated video generation.",
     )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume a previous run from the last processed frame.",
+    )
     return parser
 
 
@@ -69,7 +74,7 @@ def main() -> None:
     )
 
     pipeline = PossessionPipeline(config)
-    outputs = pipeline.run(video_path=video_path, output_dir=output_dir)
+    outputs = pipeline.run(video_path=video_path, output_dir=output_dir, resume=args.resume)
 
     print("Run complete.")
     for name, path in outputs.items():

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 from collections import Counter
 from dataclasses import asdict
@@ -27,10 +28,32 @@ class PossessionPipeline:
     def __init__(self, config: AppConfig) -> None:
         self._config = config
 
-    def run(self, video_path: str | Path, output_dir: str | Path) -> dict[str, Path]:
+    def run(
+        self,
+        video_path: str | Path,
+        output_dir: str | Path,
+        resume: bool = False,
+    ) -> dict[str, Path]:
         video_path = Path(video_path)
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
+
+        frame_csv_path = output_dir / "frame_possession.csv"
+        summary_json_path = output_dir / "summary.json"
+        annotated_video_path = output_dir / f"{video_path.stem}_annotated.mp4"
+
+        existing_records: list[FrameRecord] = []
+        start_frame_index = 0
+        if resume:
+            if frame_csv_path.exists():
+                existing_records, start_frame_index = self._load_resume_state(frame_csv_path)
+                print(
+                    f"Resuming from frame {start_frame_index} "
+                    f"({len(existing_records)} frames already processed)."
+                )
+            else:
+                print("No existing progress found, starting from beginning.")
+                resume = False
 
         metadata = get_video_metadata(video_path)
         detector = YoloDetector(self._config.model)
@@ -38,53 +61,59 @@ class PossessionPipeline:
         team_classifier = TeamColorClassifier(self._config.teams)
         possession_estimator = PossessionEstimator(self._config.possession)
 
-        records: list[FrameRecord] = []
         video_writer = None
-        annotated_video_path = output_dir / f"{video_path.stem}_annotated.mp4"
         if self._config.video.write_annotated_video:
-            video_writer = build_video_writer(annotated_video_path, metadata)
+            if resume:
+                print("Note: annotated video skipped for resumed runs.")
+            else:
+                video_writer = build_video_writer(annotated_video_path, metadata)
 
         total_processed = 0
         estimated_frames = max(metadata.frame_count // max(self._config.video.frame_stride, 1), 1)
 
-        for frame in iter_video_frames(video_path, self._config.video.frame_stride):
-            detections = detector.detect(frame.image)
-            players = tracker.update(detections.players)
-            players = team_classifier.assign(frame.image, players)
-            ball = self._select_ball(detections.balls)
-            team_in_possession = possession_estimator.update(players, ball)
+        _CSV_FIELDS = ["frame_index", "timestamp_s", "team_in_possession", "ball_visible", "player_count"]
+        csv_mode = "a" if resume else "w"
+        new_records: list[FrameRecord] = []
 
-            records.append(
-                FrameRecord(
+        with open(frame_csv_path, csv_mode, newline="", encoding="utf-8") as csv_file:
+            writer = csv.DictWriter(csv_file, fieldnames=_CSV_FIELDS)
+            if not resume:
+                writer.writeheader()
+
+            for frame in iter_video_frames(video_path, self._config.video.frame_stride, start_frame_index):
+                detections = detector.detect(frame.image)
+                players = tracker.update(detections.players)
+                players = team_classifier.assign(frame.image, players)
+                ball = self._select_ball(detections.balls)
+                team_in_possession = possession_estimator.update(players, ball)
+
+                record = FrameRecord(
                     frame_index=frame.index,
                     timestamp_s=frame.timestamp_s,
                     team_in_possession=team_in_possession,
                     ball_visible=ball is not None,
                     player_count=len(players),
                 )
-            )
+                new_records.append(record)
+                writer.writerow(asdict(record))
+                csv_file.flush()
 
-            if video_writer is not None:
-                annotated = self._annotate_frame(frame.image, players, ball, team_in_possession)
-                video_writer.write(annotated)
+                if video_writer is not None:
+                    annotated = self._annotate_frame(frame.image, players, ball, team_in_possession)
+                    video_writer.write(annotated)
 
-            total_processed += 1
-            if total_processed == 1 or total_processed % 100 == 0:
-                print(
-                    f"Processed {total_processed}/{estimated_frames} sampled frames for {video_path.name}",
-                    flush=True,
-                )
+                total_processed += 1
+                if total_processed == 1 or total_processed % 100 == 0:
+                    print(
+                        f"Processed {total_processed}/{estimated_frames} sampled frames for {video_path.name}",
+                        flush=True,
+                    )
 
         if video_writer is not None:
             video_writer.release()
 
-        frame_csv_path = output_dir / "frame_possession.csv"
-        summary_json_path = output_dir / "summary.json"
-
-        dataframe = pd.DataFrame(asdict(record) for record in records)
-        dataframe.to_csv(frame_csv_path, index=False)
-
-        summary = self._build_summary(records)
+        all_records = existing_records + new_records
+        summary = self._build_summary(all_records)
         summary_json_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
         return {
@@ -92,6 +121,24 @@ class PossessionPipeline:
             "summary_json": summary_json_path,
             "annotated_video": annotated_video_path,
         }
+
+    @staticmethod
+    def _load_resume_state(frame_csv_path: Path) -> tuple[list[FrameRecord], int]:
+        df = pd.read_csv(frame_csv_path)
+        if df.empty:
+            return [], 0
+        records = [
+            FrameRecord(
+                frame_index=int(row.frame_index),
+                timestamp_s=float(row.timestamp_s),
+                team_in_possession=None if pd.isna(row.team_in_possession) else int(row.team_in_possession),
+                ball_visible=bool(row.ball_visible),
+                player_count=int(row.player_count),
+            )
+            for row in df.itertuples()
+        ]
+        next_frame_index = int(df["frame_index"].iloc[-1]) + 1
+        return records, next_frame_index
 
     def _select_ball(self, balls: list[BallDetection]) -> BallDetection | None:
         if not balls:

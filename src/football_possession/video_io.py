@@ -38,13 +38,21 @@ def get_video_metadata(video_path: str | Path) -> VideoMetadata:
     return metadata
 
 
-def iter_video_frames(video_path: str | Path, frame_stride: int) -> Iterator[VideoFrame]:
+def iter_video_frames(
+    video_path: str | Path,
+    frame_stride: int,
+    start_frame_index: int = 0,
+) -> Iterator[VideoFrame]:
     capture = cv2.VideoCapture(str(video_path))
     if not capture.isOpened():
         raise ValueError(f"Could not open video: {video_path}")
 
     fps = max(capture.get(cv2.CAP_PROP_FPS), 1.0)
-    frame_index = 0
+
+    if start_frame_index > 0:
+        capture.set(cv2.CAP_PROP_POS_FRAMES, start_frame_index)
+
+    frame_index = start_frame_index
 
     while True:
         success, frame = capture.read()
