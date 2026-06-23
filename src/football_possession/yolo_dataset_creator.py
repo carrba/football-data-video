@@ -107,7 +107,7 @@ def create_yolo_dataset(
     import yaml as _yaml
     data_yaml = output_dir / "data.yaml"
     config = {
-        "path": str(output_dir.resolve()),
+        "path": ".",
         "train": "images/train",
         "val": "images/val",
         "nc": 1,

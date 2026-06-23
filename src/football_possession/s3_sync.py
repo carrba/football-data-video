@@ -16,6 +16,7 @@ DEFAULT_PATHS = ["video", "datasets", "annotations", "outputs", "results.json"]
 EXCLUDED_PARTS = {".git", ".venv", "__pycache__", ".pytest_cache"}
 ENV_BUCKET = "FOOTBALL_S3_BUCKET"
 ENV_PREFIX = "FOOTBALL_S3_PREFIX"
+ENV_PROFILE = "FOOTBALL_AWS_PROFILE"
 
 
 @dataclass(frozen=True)
@@ -185,11 +186,11 @@ def build_parser() -> argparse.ArgumentParser:
         )
         sub.add_argument(
             "--profile",
-            default=None,
+            default=os.getenv(ENV_PROFILE),
             help=(
-                "AWS named profile used for authentication. When omitted, the "
-                "default AWS credential chain is used, which allows EC2 IAM "
-                "roles to work without a profile."
+                f"AWS named profile for authentication. Defaults to {ENV_PROFILE} "
+                "env var if set, otherwise the default credential chain is used "
+                "(EC2 IAM roles work automatically when this is unset)."
             ),
         )
         sub.add_argument(

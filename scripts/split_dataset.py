@@ -99,7 +99,7 @@ def _write_data_yaml(dataset_dir: Path, path_root: Path) -> None:
             existing = yaml.safe_load(f) or {}
 
     config = {
-        "path": str(path_root),
+        "path": ".",
         "train": "images/train",
         "val": "images/val",
         "nc": existing.get("nc", 1),
