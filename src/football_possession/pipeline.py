@@ -68,7 +68,7 @@ class PossessionPipeline:
             else:
                 video_writer = build_video_writer(annotated_video_path, metadata)
 
-        total_processed = 0
+        total_processed = len(existing_records)
         estimated_frames = max(metadata.frame_count // max(self._config.video.frame_stride, 1), 1)
 
         _CSV_FIELDS = ["frame_index", "timestamp_s", "team_in_possession", "ball_visible", "player_count"]
