@@ -3,6 +3,7 @@ from __future__ import annotations
 import shutil
 import struct
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
@@ -83,6 +84,15 @@ class _FfmpegPipeWriter:
     """
 
     def __init__(self, output_path: Path, metadata: VideoMetadata) -> None:
+        # Isolate ffmpeg into its own process group/session so a signal sent to this
+        # process's group (SIGHUP from a dropped SSH session, Ctrl+C, etc.) doesn't also
+        # kill ffmpeg directly -- we want our own graceful shutdown (stdin close + wait)
+        # to be the thing that finalizes the moov atom, not an abrupt kill mid-encode.
+        isolation_kwargs = (
+            {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+            if sys.platform == "win32"
+            else {"start_new_session": True}
+        )
         self._process = subprocess.Popen(
             [
                 "ffmpeg", "-y",
@@ -103,6 +113,7 @@ class _FfmpegPipeWriter:
             ],
             stdin=subprocess.PIPE,
             stdout=subprocess.DEVNULL,
+            **isolation_kwargs,
         )
 
     def write(self, frame: np.ndarray) -> None:

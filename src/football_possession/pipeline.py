@@ -80,47 +80,52 @@ class PossessionPipeline:
         csv_mode = "a" if resume else "w"
         new_records: list[FrameRecord] = []
 
-        with open(frame_csv_path, csv_mode, newline="", encoding="utf-8") as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=_CSV_FIELDS)
-            if not resume:
-                writer.writeheader()
+        try:
+            with open(frame_csv_path, csv_mode, newline="", encoding="utf-8") as csv_file:
+                writer = csv.DictWriter(csv_file, fieldnames=_CSV_FIELDS)
+                if not resume:
+                    writer.writeheader()
 
-            for frame in iter_video_frames(video_path, self._config.video.frame_stride, start_frame_index):
-                detections = detector.detect(frame.image)
-                players = tracker.update(detections.players)
-                players = team_classifier.assign(frame.image, players)
-                ball = self._select_ball(detections.balls)
-                team_in_possession = possession_estimator.update(players, ball)
+                for frame in iter_video_frames(video_path, self._config.video.frame_stride, start_frame_index):
+                    detections = detector.detect(frame.image)
+                    players = tracker.update(detections.players)
+                    players = team_classifier.assign(frame.image, players)
+                    ball = self._select_ball(detections.balls)
+                    team_in_possession = possession_estimator.update(players, ball)
 
-                record = FrameRecord(
-                    frame_index=frame.index,
-                    timestamp_s=frame.timestamp_s,
-                    team_in_possession=team_in_possession,
-                    ball_visible=ball is not None,
-                    player_count=len(players),
-                )
-                new_records.append(record)
-                writer.writerow(asdict(record))
-                csv_file.flush()
-
-                if video_writer is not None:
-                    annotated = self._annotate_frame(frame.image, players, ball, team_in_possession)
-                    video_writer.write(annotated)
-
-                total_processed += 1
-                if total_processed == 1 or total_processed % 100 == 0:
-                    print(
-                        f"Processed {total_processed}/{estimated_frames} sampled frames for {video_path.name}",
-                        flush=True,
+                    record = FrameRecord(
+                        frame_index=frame.index,
+                        timestamp_s=frame.timestamp_s,
+                        team_in_possession=team_in_possession,
+                        ball_visible=ball is not None,
+                        player_count=len(players),
                     )
+                    new_records.append(record)
+                    writer.writerow(asdict(record))
+                    csv_file.flush()
 
-        if video_writer is not None:
-            video_writer.release()
-            remux_faststart(annotated_video_path)
+                    if video_writer is not None:
+                        annotated = self._annotate_frame(frame.image, players, ball, team_in_possession)
+                        video_writer.write(annotated)
+
+                    total_processed += 1
+                    if total_processed == 1 or total_processed % 100 == 0:
+                        print(
+                            f"Processed {total_processed}/{estimated_frames} sampled frames for {video_path.name}",
+                            flush=True,
+                        )
+        finally:
+            # Always finalize whatever frames were captured, even on interruption
+            # (Ctrl+C, SIGTERM, a dropped SSH session), so the video is left in a
+            # valid, playable state instead of a corrupt partial file.
+            if video_writer is not None:
+                video_writer.release()
+                remux_faststart(annotated_video_path)
 
         all_records = existing_records + new_records
         summary = self._build_summary(all_records)
         summary_json_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+        (output_dir / "_SUCCESS").write_text("", encoding="utf-8")
 
         return {
             "frame_csv": frame_csv_path,

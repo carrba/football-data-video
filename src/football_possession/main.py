@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import signal
 from pathlib import Path
 
 from football_possession.config import load_config
@@ -8,6 +9,23 @@ from football_possession.pipeline import PossessionPipeline
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+class GracefulShutdown(BaseException):
+    """Raised from a signal handler so in-flight work can finalize cleanly."""
+
+
+def _install_signal_handlers() -> None:
+    def _handler(signum, _frame):
+        raise GracefulShutdown(f"Received signal {signum}")
+
+    # SIGTERM: a plain kill. SIGHUP: what a dropped SSH session sends to its
+    # foreground process group -- without a handler, the default action for both
+    # is to terminate the process immediately with no chance to finalize the
+    # in-progress annotated video.
+    signal.signal(signal.SIGTERM, _handler)
+    if hasattr(signal, "SIGHUP"):
+        signal.signal(signal.SIGHUP, _handler)
 
 
 def resolve_project_path(path_value: str, *, must_exist: bool = False) -> Path:
@@ -55,6 +73,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    _install_signal_handlers()
     args = build_parser().parse_args()
     config_path = resolve_project_path(args.config, must_exist=True)
     config = load_config(config_path)
@@ -74,7 +93,12 @@ def main() -> None:
     )
 
     pipeline = PossessionPipeline(config)
-    outputs = pipeline.run(video_path=video_path, output_dir=output_dir, resume=args.resume)
+    try:
+        outputs = pipeline.run(video_path=video_path, output_dir=output_dir, resume=args.resume)
+    except (GracefulShutdown, KeyboardInterrupt) as exc:
+        print(f"Interrupted ({exc}); annotated video finalized up to the last processed frame.")
+        print("No _SUCCESS marker was written since the run did not complete. Re-run with --resume.")
+        raise SystemExit(1) from None
 
     print("Run complete.")
     for name, path in outputs.items():
