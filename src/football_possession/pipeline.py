@@ -15,7 +15,12 @@ from football_possession.possession import PossessionEstimator
 from football_possession.team_classifier import TeamColorClassifier
 from football_possession.tracker import PlayerTracker
 from football_possession.detection_types import BallDetection, FrameRecord, PlayerDetection
-from football_possession.video_io import build_video_writer, get_video_metadata, iter_video_frames
+from football_possession.video_io import (
+    build_video_writer,
+    get_video_metadata,
+    iter_video_frames,
+    remux_faststart,
+)
 
 TEAM_COLORS = {
     0: (44, 160, 44),
@@ -111,6 +116,7 @@ class PossessionPipeline:
 
         if video_writer is not None:
             video_writer.release()
+            remux_faststart(annotated_video_path)
 
         all_records = existing_records + new_records
         summary = self._build_summary(all_records)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
+import mimetypes
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,6 +10,7 @@ from typing import Iterable
 
 import boto3
 from botocore.client import BaseClient
+from botocore.exceptions import ClientError
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -177,6 +179,64 @@ def pull_from_s3(config: SyncConfig) -> None:
     print(f"Download complete. Downloaded: {downloaded}, skipped: {skipped}")
 
 
+def generate_presigned_url(
+    config: SyncConfig, relative_path: str, expires_in: int
+) -> str:
+    prefix = _normalize_prefix(config.prefix)
+    key = f"{prefix}{relative_path.strip('/')}"
+    client = _s3_client(config.region, config.profile)
+
+    try:
+        client.head_object(Bucket=config.bucket, Key=key)
+    except ClientError as exc:
+        status = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+        if status == 404:
+            raise SystemExit(
+                f"No such object: s3://{config.bucket}/{key} "
+                "(has it been pushed with 'football-s3 push'?)"
+            ) from exc
+        raise
+
+    params = {"Bucket": config.bucket, "Key": key}
+    content_type, _ = mimetypes.guess_type(key)
+    if content_type:
+        params["ResponseContentType"] = content_type
+
+    return client.generate_presigned_url(
+        "get_object", Params=params, ExpiresIn=expires_in
+    )
+
+
+def _add_common_args(sub: argparse.ArgumentParser) -> None:
+    sub.add_argument(
+        "--bucket",
+        default=os.getenv(ENV_BUCKET),
+        help=f"S3 bucket name. Defaults to {ENV_BUCKET}.",
+    )
+    sub.add_argument(
+        "--prefix",
+        default=os.getenv(ENV_PREFIX, "football-data-video"),
+        help=(
+            "S3 key prefix used as a project namespace. "
+            f"Defaults to {ENV_PREFIX} or 'football-data-video'."
+        ),
+    )
+    sub.add_argument(
+        "--region",
+        default=os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION"),
+        help="AWS region. Defaults to AWS_REGION/AWS_DEFAULT_REGION if set.",
+    )
+    sub.add_argument(
+        "--profile",
+        default=os.getenv(ENV_PROFILE),
+        help=(
+            f"AWS named profile for authentication. Defaults to {ENV_PROFILE} "
+            "env var if set, otherwise the default credential chain is used "
+            "(EC2 IAM roles work automatically when this is unset)."
+        ),
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Push/pull project data files between local repo and S3."
@@ -185,33 +245,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     for command in ("push", "pull"):
         sub = subparsers.add_parser(command)
-        sub.add_argument(
-            "--bucket",
-            default=os.getenv(ENV_BUCKET),
-            help=f"S3 bucket name. Defaults to {ENV_BUCKET}.",
-        )
-        sub.add_argument(
-            "--prefix",
-            default=os.getenv(ENV_PREFIX, "football-data-video"),
-            help=(
-                "S3 key prefix used as a project namespace. "
-                f"Defaults to {ENV_PREFIX} or 'football-data-video'."
-            ),
-        )
-        sub.add_argument(
-            "--region",
-            default=os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION"),
-            help="AWS region. Defaults to AWS_REGION/AWS_DEFAULT_REGION if set.",
-        )
-        sub.add_argument(
-            "--profile",
-            default=os.getenv(ENV_PROFILE),
-            help=(
-                f"AWS named profile for authentication. Defaults to {ENV_PROFILE} "
-                "env var if set, otherwise the default credential chain is used "
-                "(EC2 IAM roles work automatically when this is unset)."
-            ),
-        )
+        _add_common_args(sub)
         sub.add_argument(
             "--paths",
             nargs="+",
@@ -227,6 +261,24 @@ def build_parser() -> argparse.ArgumentParser:
             help="Print actions without uploading/downloading files.",
         )
 
+    url_sub = subparsers.add_parser(
+        "url", help="Generate a presigned URL to stream/download a file from S3."
+    )
+    _add_common_args(url_sub)
+    url_sub.add_argument(
+        "path",
+        help=(
+            "File path relative to the repo root (e.g. "
+            "outputs/match1/match1_annotated.mp4)."
+        ),
+    )
+    url_sub.add_argument(
+        "--expires",
+        type=int,
+        default=3600,
+        help="URL validity in seconds (default: 3600).",
+    )
+
     return parser
 
 
@@ -236,6 +288,18 @@ def main() -> None:
         raise SystemExit(
             "Missing S3 bucket. Pass --bucket or set FOOTBALL_S3_BUCKET."
         )
+
+    if args.command == "url":
+        cfg = SyncConfig(
+            bucket=args.bucket,
+            prefix=args.prefix,
+            region=args.region,
+            profile=args.profile,
+            paths=[],
+            dry_run=False,
+        )
+        print(generate_presigned_url(cfg, args.path, args.expires))
+        return
 
     cfg = SyncConfig(
         bucket=args.bucket,

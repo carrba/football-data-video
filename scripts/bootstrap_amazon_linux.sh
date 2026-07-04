@@ -82,6 +82,24 @@ install_system_packages() {
     mesa-libGL
 }
 
+install_ffmpeg_if_available() {
+  local pkg_manager="$1"
+
+  if command -v ffmpeg >/dev/null 2>&1; then
+    log "ffmpeg already present"
+    return
+  fi
+
+  # Not in the default Amazon Linux repos on every AMI; best-effort only since
+  # annotated-video output still works without it (just not faststart-remuxed).
+  if run_as_root "$pkg_manager" install -y ffmpeg; then
+    log "Installed ffmpeg"
+    return
+  fi
+
+  log "ffmpeg not available via $pkg_manager; annotated videos will skip the faststart remux step. Install ffmpeg manually (e.g. via a static build) if browser streaming is needed."
+}
+
 install_nvidia_driver_if_gpu() {
   local pkg_manager="$1"
 
@@ -193,6 +211,7 @@ main() {
   log "Minimum Python version required by pyproject.toml is $PYTHON_VERSION_MIN"
 
   install_system_packages "$pkg_manager"
+  install_ffmpeg_if_available "$pkg_manager"
   install_nvidia_driver_if_gpu "$pkg_manager"
 
   local python_executable
